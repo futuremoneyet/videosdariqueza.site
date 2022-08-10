@@ -1,314 +1,469 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
-<  index.html: VLC media player web interface - VLM
-< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
-<  Copyright (C) 2005-2014 VLC authors and VideoLAN
-<  $Id$
-<
-<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
-<
-<  This program is free software; you can redistribute it and/or modify
-<  it under the terms of the GNU General Public License as published by
-<  the Free Software Foundation; either version 2 of the License, or
-<  (at your option) any later version.
-<
-<  This program is distributed in the hope that it will be useful,
-<  but WITHOUT ANY WARRANTY; without even the implied warranty of
-<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-<  GNU General Public License for more details.
-<
-<  You should have received a copy of the GNU General Public License
-<  along with this program; if not, write to the Free Software
-<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
-< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-<html>
-	<head>
-		<title><?vlc gettext("VLC media player - Web Interface") ?></title>
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<meta name="referrer" content="no-referrer" />
-		<link href="favicon.ico" type="image/x-icon" rel="shortcut icon" />
-		<script type="text/javascript" src="js/common.js"></script>
-		<script type="text/javascript">
-		//<![CDATA[
-			if(isMobile()){
-				window.location='mobile.html';
-			}
-		//]]>
-		</script>
-		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.13.custom.css" rel="stylesheet" />
-		<link type="text/css" href="css/main.css" rel="stylesheet" />
-		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
-		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js"></script>
-		<script type="text/javascript" src="js/jquery.jstree.js"></script>
-		<script type="text/javascript" src="js/ui.js"></script>
-		<script type="text/javascript" src="js/controllers.js"></script>
-		<script type="text/javascript">
-		//<![CDATA[
-			var pollStatus	=	true;
-			$(function(){
-				$('.button').hover(function(){$(this).addClass('ui-state-hover')},function(){$(this).removeClass('ui-state-hover')});
-				$('#buttonPlayList').click(function(){
-					$('#libraryContainer').animate({
-						height: 'toggle'
-					});
-					$('#buttonszone1').animate({
-						width: 'toggle'
-					});
-					return false;
-				});
-				$('#buttonViewer').click(function(){
-					$('#viewContainer').animate({
-						height: 'toggle'
-					})
-					return false;
-				});
-				$('#buttonEqualizer').click(function(){
-					updateEQ();
-					$('#window_equalizer').dialog('open');
-					return false;
-				})
-				$('#buttonOffsets').click(function(){
-					$('#window_offset').dialog('open');
-					return false;
-				});
-				$('#buttonBatch').click(function(){
-					$('#window_batch').dialog('open');
-					return false;
-				});
-				$('#buttonOpen').click(function(){
-					browse_target	=	'default';
-					browse();
-					$('#window_browse').dialog('open');
-					return false;
-				});
-				$('#buttonPrev').mousedown(function(){
-					intv	=	1;
-					ccmd	=	'prev';
-					setIntv();
-					return false;
-				});
-				$('#buttonPrev').mouseup(function(){
-					if(intv<=5){
-						sendCommand({'command':'pl_previous'});
-					}
-					intv	=	0;
-					return false;
-				});
-				$('#buttonNext').mousedown(function(){
-					intv	=	1;
-					ccmd	=	'next';
-					setIntv();
-					return false;
-				});
-				$('#buttonNext').mouseup(function(){
-					if(intv<=5){
-						sendCommand({'command':'pl_next'});
-					}
-					intv	=	0;
-					return false;
-				});
-				$('#buttonPlEmpty').click(function(){
-					sendCommand({'command':'pl_empty'})
-					updatePlayList(true);
-					return false;
-				});
-				$('#buttonLoop').click(function(){
-					sendCommand({'command':'pl_loop'});
-					return false;
-				});
-				$('#buttonRepeat').click(function(){
-					sendCommand({'command':'pl_repeat'});
-					return false;
-				});
-				$('#buttonShuffle').click(function(){
-					sendCommand({'command':'pl_random'});
-					return false;
-				})
-				$('#buttonRefresh').click(function(){
-				    updatePlayList(true);
-				    return false;
-				});
-				$('#buttonPlPlay').click(function(){
-					sendCommand({
-						'command': 'pl_play',
-						'id':$('.jstree-clicked','#libraryTree').first().parents().first().attr('id').substr(5)
-					})
-					return false;
-				});
-				$('#buttonPlAdd').click(function(){
-					$('.jstree-clicked','#libraryTree').each(function(){
-						if($(this).parents().first().attr('uri')){
-							sendCommand({
-								'command':'in_enqueue',
-								'input' : $(this).parents().first().attr('uri')
-							});
-						};
-					});
-					$('#libraryTree').jstree('deselect_all');
-					setTimeout(function(){updatePlayList(true);},1000);
-					return false;
-				});
-				$('#buttonStreams, #buttonStreams2').click(function(){
-					updateStreams();
-					$('#window_streams').dialog('open');
-				});
-				$('#buttonSout').click(function(){
-					if(current_que=='main'){
-						$('#windowStreamConfirm').dialog('open');
-					}else{
-						$('#player').empty();
-						current_que		=	'main';
-						sendVLMCmd('del Current');
-						updateStatus();
-					}
-					return false;
-				});
-				$('#qrCodeConfirm').dialog({
-					autoOpen: false,
-					width:600,
-					modal: true,
-					buttons:{
-						"<?vlc gettext("Yes") ?>":function(){
-							$(this).dialog('close');
-							var urlimg = $('#mobileintflink').prop('href');
-							var codeimg = $('<img width="350" height="350" alt="qrcode"/>');
-							codeimg.attr('src', 'https://chart.apis.google.com/chart?cht=qr&chs=350x350&chld=L&choe=UTF-8&chl=' + encodeURIComponent(urlimg));
-							codeimg.dialog({width: 350, height: 350, title: "<?vlc gettext("QR Code") ?>"});
-						},
-						"<?vlc gettext("No") ?>":function(){
-							$(this).dialog('close');
-							window.location = $('#mobileintflink').attr('href');
-						}
-					}
-				});
-				$('#windowStreamConfirm').dialog({
-					autoOpen: false,
-					width:600,
-					modal: true,
-					buttons:{
-						"<?vlc gettext("Yes") ?>":function(){
-							var file			=	$('[current="current"]','#libraryTree').length>0 ? $('[current="current"]','#libraryTree').first().attr('uri') : ($('.jstree-clicked','#libraryTree').length>0 ? $('.jstree-clicked','#libraryTree').first().parents().first().attr('uri') : ($('#plid_'+current_playlist_id).attr('uri') ? $('#plid_'+current_playlist_id).attr('uri') : false));
-							if(file){
-								if($('#viewContainer').css('display')=='none'){
-									$('#buttonViewer').click();
-								}
-								var defaultStream	=	'new Current broadcast enabled input "'+file+'" output #transcode{vcodec=FLV1,vb=4096,fps=25,scale=1,acodec=mp3,ab=512,samplerate=44100,channels=2}:std{access='+$('#stream_protocol').val()+',mux=avformat{{mux=flv}},dst=0.0.0.0:'+$('#stream_port').val()+'/'+$('#stream_file').val()+'}';
-								sendVLMCmd('del Current;'+defaultStream+';control Current play');
-								$('#player').attr('href',$('#stream_protocol').val()+'://'+$('#stream_host').val()+':'+$('#stream_port').val()+'/'+$('#stream_file').val());
-								current_que			=	'stream';
-								updateStreams();
-							}
-							$(this).dialog('close');
-						},
-						"<?vlc gettext("No") ?>":function(){
-							$(this).dialog('close');
-						}
-					}
-				});
-				$('#viewContainer').animate({height: 'toggle'});
-			});
-			/* delay script loading so we won't block if we have no net access */
-			$.getScript('https://releases.flowplayer.org/js/flowplayer-3.2.6.min.js', function(data, textStatus){
-				$('#player').empty();
-				flowplayer("player", "https://releases.flowplayer.org/swf/flowplayer-3.2.7.swf");
-				/* .getScript only handles success() */
-			 });
-		//]]>
-		</script>
-	</head>
-	<body id="regular_layout">
-			<div class="centered">
-			<div id="mainContainer" class="centered">
-			<div id="controlContainer" class="ui-widget">
-				<div id="controlTable" class="ui-widget-content">
-					<ul id="controlButtons">
-						<li id="buttonPrev" class="button48  ui-corner-all" title="<?vlc gettext("Previous") ?>"></li>
-						<li id="buttonPlay" class="button48  ui-corner-all paused" title="<?vlc gettext("Play") ?>"></li>
-						<li id="buttonNext" class="button48  ui-corner-all" title="<?vlc gettext("Next") ?>"></li>
-						<li id="buttonOpen" class="button48  ui-corner-all" title="<?vlc gettext("Open Media") ?>"></li>
-						<li id="buttonStop" class="button48  ui-corner-all" title="<?vlc gettext("Stop") ?>"></li>
-						<li id="buttonFull" class="button48  ui-corner-all" title="<?vlc gettext("Full Screen") ?>"></li>
-						<li id="buttonSout" class="button48  ui-corner-all" title="<?vlc gettext("Easy Stream") ?>"></li>
-					</ul>
-					<ul id="buttonszone2" class="buttonszone">
-						<li id="buttonPlayList" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Hide / Show Library") ?>"><span class="ui-icon ui-icon-note"></span><?vlc gettext("Hide / Show Library") ?></li>
-						<li id="buttonViewer" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Hide / Show Viewer") ?>"><span class="ui-icon ui-icon-video"></span><?vlc gettext("Hide / Show Viewer") ?></li>
-						<li id="buttonStreams" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Manage Streams") ?>"><span class="ui-icon ui-icon-script"></span><?vlc gettext("Manage Streams") ?></li>
-						<li id="buttonOffsets" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Track Synchronisation") ?>"><span class="ui-icon ui-icon-transfer-e-w"></span><?vlc gettext("Track Synchronisation") ?></li>
-						<li id="buttonEqualizer" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Equalizer") ?>"><span class="ui-icon ui-icon-signal"></span><?vlc gettext("Equalizer") ?></li>
-						<li id="buttonBatch" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("VLM Batch Commands") ?>"><span class="ui-icon ui-icon-suitcase"></span><?vlc gettext("VLM Batch Commands") ?></li>
-					</ul>
-					<div id="volumesliderzone">
-						<div id="volumeSlider" title="Volume"><img src="images/speaker-32.png" class="ui-slider-handle" alt="volume"/></div>
-						<div id="currentVolume" class="dynamic">50%</div>
-					</div>
-					<div id="artszone">
-						<img id="albumArt" src="/art" width="141px" height="130px" alt="Album Art"/>
-					</div>
-					<div id="mediaTitle" class="dynamic"></div>
-					<div id="seekContainer">
-						<div id="seekSlider" title="<?vlc gettext("Seek Time") ?>"></div>
-						<div id="currentTime" class="dynamic">00:00:00</div>
-						<div id="totalTime" class="dynamic">00:00:00</div>
-					</div>
-				</div>
-			</div>
-			<div id="libraryContainer" class="ui-widget">
-				<ul id="buttonszone1" align="left" class="buttonszone ui-widget-content" style="overflow:hidden; white-space: nowrap;">
-					<li id="buttonShuffle" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Shuffle") ?>"><span class="ui-icon ui-icon-shuffle"></span><?vlc gettext("Shuffle") ?></li>
-					<li id="buttonLoop" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Loop") ?>"><span class="ui-icon ui-icon-refresh"></span><?vlc gettext("Loop") ?></li>
-					<li id="buttonRepeat" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Repeat") ?>"><span class="ui-icon ui-icon-arrowreturnthick-1-w"></span><?vlc gettext("Repeat") ?></li>
-					<li id="buttonPlEmpty" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Empty Playlist") ?>"><span class="ui-icon ui-icon-trash"></span><?vlc gettext("Empty Playlist") ?></li>
-					<li id="buttonPlAdd" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Queue Selected") ?>"><span class="ui-icon ui-icon-plus"></span><?vlc gettext("Queue Selected") ?></li>
-					<li id="buttonPlPlay" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Play Selected") ?>"><span class="ui-icon ui-icon-play"></span><?vlc gettext("Play Selected") ?></li>
-					<li id="buttonRefresh" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Refresh List") ?>"><span class="ui-icon ui-icon-arrowrefresh-1-n"></span><?vlc gettext("Refresh List") ?></li>
-				</ul>
-				<div id="libraryTree" class="ui-widget-content"></div>
-			</div>
-			<div id="viewContainer" class="ui-widget">
-				<div id="mediaViewer" class="ui-widget-content">
-					<div href="http://localhost:8081/stream.flv" style="display:block; width:100%" id="player">
-						<p><?vlc gettext("Loading flowplayer...") ?><br/><?vlc gettext("If nothing appears, check your internet connection.") ?></p>
-					</div>
-				</div>
-			</div>
-			<div class="footer">
-				VLC <?vlc print(vlc.misc.version() .. ' - Lua Web Interface - <a id="mobileintflink" href="mobile.html">Mobile Interface</a> - ' .. vlc.misc.copyright()) ?>
-			</div>
-		</div>
-		</div>
-		<div id="qrCodeConfirm" title="<?vlc gettext("Generate QR Code") ?>">
-			<p>
-				<?vlc gettext("VLC can display a QR code linking to the mobile version of the web interface; the web address of the web interface of your VLC media player instance will be transmitted over the internet to the Google Image Charts web service to generate this QR code.") ?>
-			</p>
-			<p>
-				<?vlc gettext("Do you want to go ahead with this?") ?>
-			</p>
-		</div>
-		<div id="windowStreamConfirm" title="<?vlc gettext("Confirm Stream Settings") ?>">
-			<p>
-				<?vlc gettext("By creating a stream, the <i>Main Controls</i> will operate the stream instead of the main interface.") ?>
-				<?vlc gettext("The stream will be created using default settings, for more advanced configuration, or to modify the default settings, select the button to the right: <i>Manage Streams</i>") ?>
-				<span id="buttonStreams2" class="button ui-widget ui-state-default ui-corner-all" title="<?vlc gettext("Manage Streams") ?>"><span class="ui-icon ui-icon-script"></span></span>
-			</p>
-			<p>
-				<?vlc gettext("Once the stream is created, the <i>Media Viewer</i> window will display the stream.") ?>
-				<?vlc gettext("Volume will be controlled by the player, and not the <i>Main Controls</i>.") ?>
-			</p>
-			<p>
-				<?vlc gettext("The current playing item will be streamed. If there is no currently playing item, the first selected item from the <i>Library</i> will be the subject of the stream.") ?>
-			</p>
-			<p>
-				<?vlc gettext("To stop the stream and resume normal controls, click the <i>Open Stream</i> button again.") ?>
-			</p>
-			<p>
-				<?vlc gettext("Are you sure you wish to create the stream?") ?>
-			</p>
-		</div>
-		<?vlc
-		current_page = "index"
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-		dialogs("browse_window.html","stream_window.html","create_stream.html","offset_window.html","mosaic_window.html","equalizer_window.html","batch_window.html","error_window.html");
-		?>
-	</body>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Dosis:wght@200;300;400;500;600;700;800&family=Oswald:wght@200;300;400;500;600;700&family=Signika:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="./assets/css/com.css">
+
+    <!-- Título da Página -->
+    <title>Protocolo Zero Barriga</title>
+    
+    <style type="text/css">
+      header {
+        color: white;
+        background-image: url("assets/img/bg.jpeg");
+        background-color: rgba(0, 0, 0, 0.6);
+        background-position: center;
+        background-size: cover;
+        background-attachment: fixed;
+        background-blend-mode: darken;
+      }
+    </style>
+    
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '671840113939919');
+      fbq('init', '902207957134621');
+      fbq('init', '1060746161440914');
+      fbq('init', '649325786402999');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=671840113939919&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+    
+  </head>
+  <body>
+    
+    <header class="py-4">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8 text-center">
+            <!-- Imagem Ultrasecreto -->
+            <img class="img-fluid" src="./assets/img/ultrasecreto.svg">
+
+            <!-- Headline -->
+            <h3 class="my-4"><b>6 ingredientes Simples Que Fazem O Corpo Queimar Até 13Kg Em 30 Dias</b></h3>
+
+            <!-- VSL -->
+            <script type="text/javascript" id="scr_62279575aa8f7e00086fa73e">var s=document.createElement("script");s.src="https://cdn.converteai.net/ccdae62e-116b-492f-9648-160a0c5bfcc3/players/62279575aa8f7e00086fa73e/player.js",s.async=!0,document.head.appendChild(s);</script>
+
+            <!-- Botão 1 -->
+            <div id="cta1" class="mt-4 d-none">
+              <a href="https://pay.kiwify.com.br/HkrDVPl" class="a-btn" style="text-decoration: none;">
+                <span class="span-btn">QUERO OBTER ACESSO!</span>
+                <span class="span-btn2">(atenção: vagas limitadas)</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="comments py-4">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="fb-comments" style="margin-top: 5px;">
+              <div class="fb-comments-header">
+                <span>21 comentarios</span>
+              </div>
+              <div class="fb-comments-wrapper" id="2">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m2.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Valesca Silva</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Amei vou fazer hoje mesmo pois estou em processo de emagrecimento. Muito obrigada 😘</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>8</likes>
+                        
+                        <date>4 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="3">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m3.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Vitória Pereira</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Ele também me ajudou perdi 22kg obrigado, e ajuda até hoje com essas receitas deliciosas</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>9</likes>
+                        
+                        <date>5 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="4">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m4.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Mariana Martins</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Esse vídeo mudou minha vida, já são 20 kilos a menos em 4 meses ,agradecida</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>11</likes>
+                        
+                        <date>12 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="5">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m5.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Juliana Castro</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Tomei essa vitamina durante 1 mês, acompanhada da dieta de açúcar e carboidratos, perdir 5 quilos, e me sentia bem melhor, faz um ano, agora vou voltar a tomar novamente.</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>15</likes>
+                        
+                        <date>19 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="6">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m6.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Isabella Lopes</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Estou feliz, a 7 meses atrás eu estava com 78kg e hoje estou com 54kg até postei a respeito no meu perfil aqui no face o antes e depois 😘😘😘</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>17</likes>
+                        
+                        <date>24 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="7">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m7.jpeg"></td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Roberta Gomes</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Realmente funciona, minha barriga tem diminuído a cada dia. Obrigada por compartilhar 🥰</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>18</likes>
+                        
+                        <date>26 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fb-comments-wrapper" id="9">
+                <table class="fb-comments-comment">
+                  <tbody>
+                    <tr>
+                      <td rowspan="3" class="fb-comments-comment-img"><img
+                          src="./assets/img/comentarios/m11.jpeg">
+                      </td>
+                      <td>
+                        <font class="fb-comments-comment-name">
+                          <name>Rafaela Souza</name>
+                        </font>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-text">Emagrece mesmo gente receita testada e aprovada</td>
+                    </tr>
+                    <tr>
+                      <td class="fb-comments-comment-actions">
+                        <like>Curtir</like>
+                        ·
+                        <reply>Responder</reply>
+                        ·
+                        <likes>22</likes>
+                        
+                        <date>39 min</date>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <button class="fb-comments-loadmore" onclick="javascript:loadMore();">Carregar mais 5 comentários</button>
+              <div style="display:none" id="more">
+                <div class="fb-comments-wrapper">
+                  <table class="fb-comments-comment" id="10">
+                    <tbody>
+                      <tr>
+                        <td rowspan="3" class="fb-comments-comment-img"><img
+                            src="./assets/img/comentarios/m12.jpeg">
+                        </td>
+                        <td>
+                          <font class="fb-comments-comment-name">
+                            <name>Ana Sofia</name>
+                          </font>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-text">Maravilhosa melhor de todas fez 7dias tomando e 7 klos já conseguir eliminar tô muito feliz obrigado 😍😍😍</td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-actions">
+                          <like>Curtir</like>
+                          ·
+                          <reply>Responder</reply>
+                          ·
+                          <likes>41</likes>
+                          
+                          <date>1 h</date>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="fb-comments-wrapper" id="11">
+                  <table class="fb-comments-comment">
+                    <tbody>
+                      <tr>
+                        <td rowspan="3" class="fb-comments-comment-img"><img
+                            src="./assets/img/comentarios/m15.jpeg">
+                        </td>
+                        <td>
+                          <font class="fb-comments-comment-name">
+                            <name>Laura Flores</name>
+                          </font>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-text">Eu já estou tomando, já eliminei 7 kls, já fez muita diferença, minhas roupas estavam todas apertadas,  ágora já estão largas, estou num pós operatório de coluna por isso engordei muito 15 Kg, estava sentindo muita dor agora amenizou muito depois que emagreci já consigo andar mais q antes 🙏🙏🙏🙏🙏🙏</td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-actions">
+                          <like>Curtir</like>
+                          ·
+                          <reply>Responder</reply>
+                          ·
+                          <likes>40</likes>
+                          
+                          <date>1 h</date>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="fb-comments-wrapper" id="12">
+                  <table class="fb-comments-comment">
+                    <tbody>
+                      <tr>
+                        <td rowspan="3" class="fb-comments-comment-img"><img
+                            src="./assets/img/comentarios/m16.jpeg">
+                        </td>
+                        <td>
+                          <font class="fb-comments-comment-name">
+                            <name>Daniela Costa</name>
+                          </font>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-text">Muito Obrigada tem me ajudado e muito,Adorei ...Durmo super bem e vendo resultado ..🌹🥰🙋</td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-actions">
+                          <like>Curtir</like>
+                          ·
+                          <reply>Responder</reply>
+                          ·
+                          <likes>47</likes>
+                          
+                          <date>1 h</date>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="fb-comments-wrapper" id="13">
+                  <table class="fb-comments-comment">
+                    <tbody>
+                      <tr>
+                        <td rowspan="3" class="fb-comments-comment-img"><img
+                            src="./assets/img/comentarios/m17.jpeg"></td>
+                        <td>
+                          <font class="fb-comments-comment-name">
+                            <name>Juliana Dias</name>
+                          </font>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-text">Em duas semanas comecei a ver resultados, muito bom</td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-actions">
+                          <like>Curtir</like>
+                          ·
+                          <reply>Responder</reply>
+                          ·
+                          <likes>50</likes>
+                          
+                          <date>1 h</date>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="fb-comments-wrapper">
+                  <table class="fb-comments-comment" id="14">
+                    <tbody>
+                      <tr>
+                        <td rowspan="3" class="fb-comments-comment-img"><img
+                            src="./assets/img/comentarios/m18.jpeg">
+                        </td>
+                        <td>
+                          <font class="fb-comments-comment-name">
+                            <name>Isabelle Correia</name>
+                          </font>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-text">Meu irmão perdeu 6 kl em 15 dias... vou começar hj rsrs</td>
+                      </tr>
+                      <tr>
+                        <td class="fb-comments-comment-actions">
+                          <like>Curtir</like>
+                          ·
+                          <reply>Responder</reply>
+                          ·
+                          <likes>66</likes>
+                          
+                          <date>1 h</date>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <!-- Botão 2 -->
+            <div id="cta2" class="mt-4 d-none">
+              <a href="https://pay.kiwify.com.br/HkrDVPl" class="a-btn" style="text-decoration: none;">
+                <span class="span-btn">QUERO OBTER ACESSO!</span>
+                <span class="span-btn2">(atenção: vagas limitadas)</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bg-dark py-3 text-center">
+      <div class="text-white"><a href="termos.html" class="text-white">Termos de Uso</a> | <a href="privacidade.html" class="text-white">Política de Privacidade</a></div>
+    </footer>
+
+    <script type="text/javascript">
+      setTimeout(() => {document.getElementById("cta1").classList.remove("d-none"); document.getElementById("cta2").classList.remove("d-none")}, 1637000); // temporização da Call to Action (em milissegundos)
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="./assets/js/com.js"></script>
+  </body>
 </html>
